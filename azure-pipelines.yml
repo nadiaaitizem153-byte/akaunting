@@ -6,41 +6,34 @@ pool:
 
 steps:
 
-- task: UsePHPVersion@0
-  inputs:
-    versionSpec: '8.1'
-
+# Update system
 - script: sudo apt-get update
   displayName: Update system
 
-- script: sudo apt-get install -y unzip curl python3-pip
-  displayName: Install required tools
+# Install PHP + required tools
+- script: |
+    sudo apt-get install -y php8.1 php8.1-cli php8.1-xml php8.1-mbstring \
+    php8.1-curl php8.1-zip unzip curl python3-pip
+    php -v
+  displayName: Install PHP and tools
 
+# Install Composer
 - script: |
     curl -sS https://getcomposer.org/installer | php
     sudo mv composer.phar /usr/local/bin/composer
+    composer --version
   displayName: Install Composer
 
+# Install PHP dependencies
 - script: composer install
-  displayName: Install PHP dependencies
+  displayName: Install dependencies
 
-- script: php -v
-  displayName: Check PHP version
-
+# Dependency security scan (SCA)
 - script: composer audit || true
   displayName: Dependency security scan
 
+# Static code security scan (SAST)
 - script: |
     pip3 install semgrep
     semgrep --config=auto || true
   displayName: Static code security scan
-
-- task: ArchiveFiles@2
-  inputs:
-    rootFolderOrFile: .
-    archiveFile: $(Build.ArtifactStagingDirectory)/akaunting.zip
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: $(Build.ArtifactStagingDirectory)
-    ArtifactName: build
