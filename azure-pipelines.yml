@@ -1,0 +1,46 @@
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+
+- task: UsePHPVersion@0
+  inputs:
+    versionSpec: '8.1'
+
+- script: sudo apt-get update
+  displayName: Update system
+
+- script: sudo apt-get install -y unzip curl python3-pip
+  displayName: Install required tools
+
+- script: |
+    curl -sS https://getcomposer.org/installer | php
+    sudo mv composer.phar /usr/local/bin/composer
+  displayName: Install Composer
+
+- script: composer install
+  displayName: Install PHP dependencies
+
+- script: php -v
+  displayName: Check PHP version
+
+- script: composer audit || true
+  displayName: Dependency security scan
+
+- script: |
+    pip3 install semgrep
+    semgrep --config=auto || true
+  displayName: Static code security scan
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: .
+    archiveFile: $(Build.ArtifactStagingDirectory)/akaunting.zip
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: $(Build.ArtifactStagingDirectory)
+    ArtifactName: build
